@@ -1,4 +1,4 @@
-function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
+function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE refs] ...
 	 = plotautocovarianceandAWNandAEA()
   ## Simulate and plot the total interference average envelope amplitude
   ## (AEA) and the corresponding interference waveform. Requires the 
@@ -15,8 +15,8 @@ function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
   ## kappa = log(2) * tildekappa is the average number of transmitters
   ## inside the -3 dB power footprint---further information in the thesis
   tkappa = 1;
-  fc = 1 * 10 ^ 6; # Carrier frequency
-  cohtime =  4 * pi * 10 ^ 5 / (5 * fc); # Coherence time (s) (tau_c)
+  fc = 1 * 10 ^ 6 # Carrier frequency
+  cohtime =  4 * pi * 10 ^ 5 / (5 * fc) # Coherence time (s) (tau_c)
   orbitalspeed = 7.4 * 10 ^ 3; # The LEO BS orbital speed
   h = 200 * 10 ^ 3; # The LEO BS altitude
   ## The constant D_{h, epsilon, varphi} for epsilon = 90 deg and
@@ -28,7 +28,7 @@ function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
   ## The number of fading blocks is defined such that the LEO BS does not
   ## move outside the rectangular area in planarHPPrefs(.)
   scaling = sqrt(10 ^ 5 / dd); # Scales the PPP region [-0.5 0.5] ^ 2
-  fadingblocksN = ceil(frac1 * (scaling / orbitalspeed) / cohtime);
+  fadingblocksN = ceil(frac1 * (scaling / orbitalspeed) / cohtime)
   
   symbolN = 1; # The symbol sample length 
   ## Number of samples per fading block (must have symbolN as a factor). 
@@ -42,7 +42,7 @@ function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
   
   tic
   ## Simulate the signals
-  [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] = ... 
+  [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE refs] = ... 
     condAWN(tkappa, fadingblocksN, frac1 / fadingblocksN, ...
 	    signallength, symbolN, K, fadingmean);
   toc
@@ -61,7 +61,7 @@ function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
 			 * signallength /  cohtime)], "unbiased");
 
   ## Modulate the samples into an analog signal
-  frac2 = 1 / 10; # Limit the length of the modulated signal
+  frac2 = 1 / 1; # Limit the length of the modulated signal
   T = 0 : 0.01 : frac2 * fadingblocksN * signallength;
   xbRICE = digitaltoanalog(T, AWNtotalsRICE(1:frac2 * fadingblocksN ...
 					      * signallength)');
@@ -149,7 +149,7 @@ function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
 
 endfunction
 
-function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
+function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE refs] ...
 	 = condAWN(tkappa, fadingblocksN, cohtime, signallength, ...
 		   symbolN, K, fadingmean)
   a = 10 ^ 5; # Scaling for the PPP sampling region [-0.505, 0.505] ^ 2
@@ -160,7 +160,7 @@ function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
   AEAsLOS = zeros(fadingblocksN, 1);
   AEAsRICE = zeros(fadingblocksN, 1);  
   refs = planarHPPrefs(tkappa * a / pi); # The Earth transmitter locations
-  refs = [refs(1, :) - 0.5; refs(2, :) + 0.5];
+  refs = [refs(1, :) - 0.5; refs(2, :)];
   for iii = 1:fadingblocksN
     if(mod(iii, 250) == 0) # Observe the progression
       disp([num2str(iii), "/", num2str(fadingblocksN)]);
@@ -214,9 +214,11 @@ endfunction
 
 ## Derive the AEAs and the interference waveforms at nth fading block
 function [nthAEAsLOS nthAEAsRICE nthAWNsLOS nthAWNsRICE] ...
-	 = nthAEAsandAWNs(n,refs, cohtime, signallength, K, tkappa, ...
+	 = nthAEAsandAWNs(n, refs, cohtime, signallength, K, tkappa, ...
 			  fadingmean)
-  refs = [refs(1, :) + n * cohtime; refs(2, :)]; # Move refs by n steps
+  ## Move refs by n steps. NOTE that "cohtime" is here for scaling reasons
+  ## cohtime = 1 / fadingblocksN !!
+  refs = [refs(1, :) + n * cohtime; refs(2, :)]; 
   GPrefs = GP(refs, tkappa, fadingmean); # Interferer locations
   ## Determine the amplitude fading parameters for normalized power fading
   s = sqrt(K / (1 + K)); # Noncentrality parameter
@@ -248,7 +250,7 @@ function GPrefs = GP(refs, tkappa, fadingmean)
   a = 10 ^ 5; # A scaling factor corresponding to refs in [-0.5 0.5] ^ 2
   GPrefs = exp(-a * norm(refs, 2, "cols") .^ 2);
   ## Here put a footprint restriction (for intercell, GPrefs < 0.5)
-  GPrefs = GPrefs(find(GPrefs < 0.5));  
+  GPrefs = GPrefs(find(GPrefs > 0));  
   ## ... or take only the nearest transmitter
   ## (here, the scaling corresponds to the Rice fading):
   ##  GPrefs = [0 max(GPrefs) * (1 + 4 * tkappa * fadingmean ^ 2)]; 
