@@ -34,7 +34,7 @@ function [AEAsLOS AEAsRICE AWNtotalsLOS AWNtotalsRICE] ...
   ## Number of samples per fading block (must have symbolN as a factor). 
   ## Each transmitter is in the same block (with independent fading gains)
   signallength = 1 * symbolN; 
-  K = 1000; # The Rice-K fading parameter
+  K = 1; # The Rice-K fading parameter
   ## Generate a Rice-K distribution of normalized power
   pd = RicianDistribution(sqrt(K / (1 + K)), sqrt(1 / (2 * (1 + K))));
   fadingmean = mean(pd); # The mean of the amplitude fading gain
